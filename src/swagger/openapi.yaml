@@ -1,0 +1,596 @@
+openapi: 3.0.0
+info:
+  title: Job Portal API
+  version: 1.0.0
+  description: Complete API documentation for job portal system
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    JobPost:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        posted_date:
+          type: string
+          format: date
+        closing_date:
+          type: string
+          format: date
+        company_id:
+          type: integer
+
+    Application:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        job_post_id:
+          type: integer
+        applied_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [PENDING, ACCEPTED, REJECTED]
+
+    Bookmark:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        job_post_id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    UserReview:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        company_id:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Company:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        website:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    UserActivity:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        activity_type:
+          type: string
+        details:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    JobViewed:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        job_posting_id:
+          type: integer
+        viewed_at:
+          type: string
+          format: date-time
+        job_title:
+          type: string
+
+tags:
+  - name: Auth
+    description: Authentication endpoints
+  - name: Jobs
+    description: Job posting management
+  - name: Applications
+    description: Job application management
+  - name: Bookmarks
+    description: Bookmark management
+  - name: Reviews
+    description: Company review management
+  - name: Companies
+    description: Company management
+  - name: Activities
+    description: User activity tracking
+  - name: JobViewed
+    description: Job view history management
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+                - password
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        201:
+          description: User registered successfully
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        200:
+          description: Login successful
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refreshToken
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        200:
+          description: New tokens generated
+
+  /auth/profile:
+    put:
+      tags: [Auth]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+      responses:
+        200:
+          description: Profile updated successfully
+
+  /jobs:
+    get:
+      tags: [Jobs]
+      summary: Get all jobs
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JobPost'
+
+  /jobs/{id}:
+    get:
+      tags: [Jobs]
+      summary: Get job by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPost'
+
+  /applications:
+    post:
+      tags: [Applications]
+      security:
+        - bearerAuth: []
+      summary: Submit job application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobPostId
+              properties:
+                jobPostId:
+                  type: integer
+      responses:
+        201:
+          description: Application submitted successfully
+
+    get:
+      tags: [Applications]
+      security:
+        - bearerAuth: []
+      summary: Get user's applications
+      responses:
+        200:
+          description: List of applications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Application'
+
+  /applications/{id}:
+    delete:
+      tags: [Applications]
+      security:
+        - bearerAuth: []
+      summary: Delete application
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Application deleted successfully
+
+  /bookmarks:
+    post:
+      tags: [Bookmarks]
+      security:
+        - bearerAuth: []
+      summary: Create bookmark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobPostId
+              properties:
+                jobPostId:
+                  type: integer
+      responses:
+        201:
+          description: Bookmark created successfully
+
+    get:
+      tags: [Bookmarks]
+      security:
+        - bearerAuth: []
+      summary: Get user's bookmarks
+      responses:
+        200:
+          description: List of bookmarks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookmarks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Bookmark'
+
+  /reviews:
+    post:
+      tags: [Reviews]
+      security:
+        - bearerAuth: []
+      summary: Create review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - companyId
+                - rating
+                - comment
+              properties:
+                companyId:
+                  type: integer
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                comment:
+                  type: string
+      responses:
+        201:
+          description: Review created successfully
+
+  /reviews/company/{companyId}:
+    get:
+      tags: [Reviews]
+      summary: Get company reviews
+      parameters:
+        - in: path
+          name: companyId
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: List of company reviews
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserReview'
+
+  /companies:
+    get:
+      tags: [Companies]
+      summary: Get all companies
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: List of companies
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  companies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Company'
+
+    post:
+      tags: [Companies]
+      security:
+        - bearerAuth: []
+      summary: Create company
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - industry
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                industry:
+                  type: string
+                location:
+                  type: string
+                website:
+                  type: string
+      responses:
+        201:
+          description: Company created successfully
+
+  /activities:
+    get:
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      summary: Get user activities
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: List of activities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  activities:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserActivity'
+
+  /activities/recent:
+    get:
+      tags: [Activities]
+      security:
+        - bearerAuth: []
+      summary: Get recent activities
+      responses:
+        200:
+          description: List of recent activities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserActivity'
+
+  /job-views:
+    post:
+      tags: [JobViewed]
+      security:
+        - bearerAuth: []
+      summary: Record job view
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobPostingId
+              properties:
+                jobPostingId:
+                  type: integer
+      responses:
+        201:
+          description: Job view recorded successfully
+
+    get:
+      tags: [JobViewed]
+      security:
+        - bearerAuth: []
+      summary: Get viewed jobs
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        200:
+          description: List of viewed jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  viewedJobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/JobViewed'
